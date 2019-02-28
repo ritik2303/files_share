@@ -37,6 +37,9 @@ int main(int argc, char const *argv[])
         return -1; 
     } 
     char str [80];
+    memset(buffer, 0, 1024);
+    valread = read( sock , buffer, 1024); 
+    printf("%s\n",buffer);
 
     while(true){
         printf ("Enter text: ");
@@ -44,6 +47,7 @@ int main(int argc, char const *argv[])
         printf ("Sending %s \n",str);
         
         send(sock , str , strlen(str) , 0 ); 
+        memset(buffer, 0, 1024);
         valread = read( sock , buffer, 1024); 
         printf("%s\n",buffer ); 
     }
