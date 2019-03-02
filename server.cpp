@@ -5,8 +5,13 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <errno.h>  
-#include <arpa/inet.h>    //close  
-#define PORT 8000
+#include <arpa/inet.h>    //close 
+
+#include <sys/stat.h> //for getting file stats
+#include <sys/sendfile.h> //for sendfile() function
+#include <sys/fcntl.h> //for 0_RDONLY
+
+#define PORT 8550
 
 char *server_message =
 "HTTP/1.1 200 OK \n\
@@ -26,8 +31,15 @@ char *server_message =
 
 
 int main(int argc, char const *argv[]) {
+
+    struct stat obj; //to use stat.h
+    char buf[100], command[5], filename[20];
+    int k, i, size, len, c;
+    int filehandle;
+
+    
     int master_socket , new_socket , client_socket[30] ,  
-          max_clients = 30 , activity, i , valread , sd;   struct sockaddr_in address;
+          max_clients = 30 , activity , valread , sd;   struct sockaddr_in address;
     int opt = 1;
     int max_sd;
     int addrlen = sizeof(address);
@@ -59,11 +71,11 @@ int main(int argc, char const *argv[]) {
 
     // Forcefully attaching socket to the port 8000
     if (bind(master_socket, (struct sockaddr *)&address, sizeof(address))<0) {
-        perror("bind failed");
+        perror("Binding error");
         exit(EXIT_FAILURE);
     }
     if (listen(master_socket, 5) < 0) {
-        perror("listen");
+        perror("Listen failed");
         exit(EXIT_FAILURE);
     }
 
@@ -101,7 +113,8 @@ int main(int argc, char const *argv[]) {
         if ((activity < 0) && (errno!=EINTR))   
         {   
             printf("select error");   
-        }   
+        }
+ 
         //If something happened on the master socket ,  
         //then its an incoming connection  
         printf("%c",FD_ISSET(master_socket, &readfds));
@@ -120,13 +133,21 @@ int main(int argc, char const *argv[]) {
                   (address.sin_port));   
            
             //send new connection greeting message  
-            if( send(new_socket, server_message, strlen(server_message), 0) != strlen(server_message) )   
-            {   
-                perror("send");   
-            }   
+            // if( send(new_socket, server_message, strlen(server_message), 0) != strlen(server_message) )   
+            // {   
+            //     perror("send");   
+            // }   
                  
-            puts("Welcome message sent successfully");   
-            printf("New socket %d\n" , new_socket);   
+            // puts("Welcome message sent successfully");   
+         //Somebody disconnected , get his details and print  
+                    getpeername(sd , (struct sockaddr*)&address , \ 
+                        (socklen_t*)&addrlen);   
+                    printf("Host disconnected , ip %s , port %d \n" ,  
+                          inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
+                         
+                    //Close the socket and mark as 0 in list for reuse  
+                    close( sd );   
+                    client_socket[i] = 0;       // printf("New socket %d\n" , new_socket);   
             
             //add new socket to array of sockets  
             for (i = 0; i < max_clients; i++)   
@@ -149,35 +170,92 @@ int main(int argc, char const *argv[]) {
 
             if (FD_ISSET( sd , &readfds))   
             {   
-                //Check if it was for closing , and also read the  
-                //incoming message  
-                memset(buffer, 0, 1024);
                 
-                valread = read( sd , buffer, 1024);
+                recv(sd, buf, 100, 0);
+                sscanf(buf, "%s", command);
+                if(!strcmp(command,"get"))
+                {
+                    sscanf(buf, "%s%s", filename, filename);
+                    stat(filename, &obj);
+                    filehandle = open(filename, O_RDONLY);
+                    size = obj.st_size;
+                    if(filehandle == -1)
+                        size = 0;
+                    send(sd, &size, sizeof(int), 0);
+                    if(size)
+                    sendfile(sd, filehandle, NULL, size);
 
-                if (valread== 0 || valread == -1)   
-                {   
+                }
+                else if(!strcmp(command, "put"))
+                {
+                    int c = 0, len;
+                    char *f;
+                    sscanf(buf+strlen(command), "%s", filename);
+                    recv(sd, &size, sizeof(int), 0);
+                    i = 1;
+                    while(1)
+                        {
+                        filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
+                        if(filehandle == -1)
+                        {
+                            sprintf(filename + strlen(filename), "%d", i);
+                        }
+                        else
+                            break;
+                        }
+                    f = (char*)malloc(size);
+                    recv(sd, f, size, 0);
+                        c = write(filehandle, f, size);
+                    close(filehandle);
+                    send(sd, &c, sizeof(int), 0);
+                }
+
+                else if(!strcmp(command, "bye") || !strcmp(command, "quit"))
+                {
                     printf("error %d\n",errno);   
                     //Somebody disconnected , get his details and print  
                     getpeername(sd , (struct sockaddr*)&address , \ 
                         (socklen_t*)&addrlen);   
                     printf("Host disconnected , ip %s , port %d \n" ,  
                           inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
-                         
+
+                    int a = 1;
+                    send(sd, &a, sizeof(int), 0);
+
                     //Close the socket and mark as 0 in list for reuse  
                     close( sd );   
-                    client_socket[i] = 0;   
-                }   
-                     
-                //Echo back the message that came in  
-                else 
-                {   
-                    //set the string terminating NULL byte on the end  
-                    //of the data read  
-                    buffer[valread] = '\0';   
-                    send(sd , buffer , strlen(buffer) , 0 ); 
+                    client_socket[i] = 0;
+                }
 
-                }   
+
+
+                // memset(buffer, 0, 1024);
+                
+                // valread = read( sd , buffer, 1024);
+
+                // if (valread== 0 || valread == -1)   
+                // {   
+                //     printf("error %d\n",errno);   
+                //     //Somebody disconnected , get his details and print  
+                //     getpeername(sd , (struct sockaddr*)&address , \ 
+                //         (socklen_t*)&addrlen);   
+                //     printf("Host disconnected , ip %s , port %d \n" ,  
+                //           inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
+                         
+                //     //Close the socket and mark as 0 in list for reuse  
+                //     close( sd );   
+                //     client_socket[i] = 0;   
+                // }   
+                     
+                // //Echo back the message that came in  
+                // else 
+                // {   
+                //     //set the string terminating NULL byte on the end  
+                //     //of the data read  
+                //     buffer[valread] = '\0';   
+                //     send(sd , buffer , strlen(buffer) , 0 ); 
+
+                // }   
             }   
         }   
     }   
