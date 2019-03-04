@@ -8,12 +8,12 @@
 #include <arpa/inet.h>    //close 
 #include <string>
 #include <sys/stat.h> //for getting file stats
-#include <sys/sendfile.h> //for sendfile() function
-#include <sys/fcntl.h> //for 0_RDONLY
 #include <unordered_map> 
 #include <iostream>
 using namespace std;
 #include "html.h"
+#include "normal.h"
+#include "logic.h"
 #define PORT 8550
 
 char *server_message =
@@ -32,21 +32,21 @@ char *server_message =
 </body>\n\
 </html>";
 
+void closeConn(int soc, struct sockaddr_in address,int* list_soc);
+
 int main(int argc, char const *argv[]) {
 
     struct stat obj; //to use stat.h
-    char buf[1024], command[5], filename[20];
-    int k, i, size, len, c;
-    int filehandle;
+    char buf[100], command[5], filename[20];
+    int k, i, len, c;
 
     
     int master_socket , new_socket , client_socket[30] ,  
-          max_clients = 30 , activity , valread , sd;   struct sockaddr_in address;
+          max_clients = 6 , activity , valread , sd;   struct sockaddr_in address;
     int opt = 1;
     int max_sd;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
-    unordered_map<string, string> http_request; 
 
     //set of socket descriptors  
     fd_set readfds;   
@@ -160,120 +160,40 @@ int main(int argc, char const *argv[]) {
         //else its some IO operation on some other socket 
         for (i = 0; i < max_clients; i++)   
         {   
-            sd = client_socket[i];   
+            sd = client_socket[i]; 
 
             if (FD_ISSET( sd , &readfds))   
             {   
-                valread = recv(sd, buf, 1024, 0);
+                valread = recv(sd, buf, 100, 0);
                 printf("169  %d\n",valread);
 
                 if (valread <= 0){
                     printf("error 178 %d\n",errno);   
                     //Somebody disconnected , get his details and print  
-                    getpeername(sd , (struct sockaddr*)&address , \ 
-                        (socklen_t*)&addrlen);   
-                    printf("Host disconnected , ip %s , port %d \n" ,  
-                          inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
-                         
-                    //Close the socket and mark as 0 in list for reuse  
-                    close( sd );   
-                    client_socket[i] = 0;  
+                    closeConn(sd, address, &client_socket[i]);
+
                 }else
                 {
-                    // printf("value   %d\n",valread);
                     buf[valread] = '\0';   
-                    printf("buffer %s\n",buf);
 
-                    http_request.clear();
                     string work(buf);
                     string str1 = "text/html"; 
                     size_t found = work.find(str1); 
                     if (found != string::npos) 
                     { // html output
-                        printf("html\n");
 
-                        html(sd);
+                        html(sd, buf, valread);
                     }
                     else
                     {
                         // non html
-                        printf("non - html\n");
-
+                        normal(sd, buf, valread);
                     }
                     
-                
-                    printf("196\n");
+                    if(logic(&sd, buf, valread) == -1 ){
+                        closeConn(sd, address, &client_socket[i]);                    
+                    }
                     
-                    sscanf(buf, "%s", command);
-
-                    if(!strcmp(command,"get"))
-                    {
-                        printf("error %d\n",errno);   
-                        //Somebody disconnected , get his details and print  
-                        getpeername(sd , (struct sockaddr*)&address , \ 
-                            (socklen_t*)&addrlen);   
-                        printf("Host disconnected , ip %s , port %d \n" ,  
-                            inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
-                            
-                        //Close the socket and mark as 0 in list for reuse  
-                        close( sd );   
-                        client_socket[i] = 0;   
-                    }   
-                    sscanf(buf, "%s", command);
-
-                    if(!strcmp(command,"get"))
-                    {
-                        sscanf(buf, "%s%s", filename, filename);
-                        stat(filename, &obj);
-                        filehandle = open(filename, O_RDONLY);
-                        size = obj.st_size;
-                        if(filehandle == -1)
-                            size = 0;
-                        send(sd, &size, sizeof(int), 0);
-                        if(size)
-                        sendfile(sd, filehandle, NULL, size);
-
-                    }
-                    else if(!strcmp(command, "put"))
-                    {
-                        int c = 0, len;
-                        char *f;
-                        sscanf(buf+strlen(command), "%s", filename);
-                        recv(sd, &size, sizeof(int), 0);
-                        i = 1;
-                        while(1)
-                            {
-                            filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
-                            if(filehandle == -1)
-                            {
-                                sprintf(filename + strlen(filename), "%d", i);
-                            }
-                            else
-                                break;
-                            }
-                        f = (char*)malloc(size);
-                        recv(sd, f, size, 0);
-                            c = write(filehandle, f, size);
-                        close(filehandle);
-                        send(sd, &c, sizeof(int), 0);
-                    }
-
-                    else if(!strcmp(command, "bye") || !strcmp(command, "quit"))
-                    {
-                        printf("error %d\n",errno);   
-                        //Somebody disconnected , get his details and print  
-                        getpeername(sd , (struct sockaddr*)&address , \ 
-                            (socklen_t*)&addrlen);   
-                        printf("Host disconnected , ip %s , port %d \n" ,  
-                            inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
-
-                        int a = 1;
-                        send(sd, &a, sizeof(int), 0);
-
-                        //Close the socket and mark as 0 in list for reuse  
-                        close( sd );   
-                        client_socket[i] = 0;
-                    }
                 }
             }   
         }   
@@ -281,4 +201,16 @@ int main(int argc, char const *argv[]) {
     printf("202\n");    
          
     return 0;   
+}
+
+void closeConn(int soc, struct sockaddr_in address,int* list_soc){
+    int addrlen = sizeof(address);
+    getpeername(soc , (struct sockaddr*)&address , \ 
+            (socklen_t*)&addrlen);   
+        printf("Host disconnected , ip %s , port %d \n" ,  
+            inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
+            
+        //Close the socket and mark as 0 in list for reuse  
+        close( soc );   
+        *list_soc = 0;   
 }

@@ -36,7 +36,7 @@ what yet.\n\
 // void encode(std::string& data);
 // void escape1(std::string *data);
 
-void html(int soc){
+void html(int soc, char buf[1024], int valend){
     printf("\nhello from html\n");
     send(soc, server_message1, strlen(server_message1), 0);
 }

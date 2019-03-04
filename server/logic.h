@@ -1,0 +1,1 @@
+int logic(int* soc, char buf[100], int valend);

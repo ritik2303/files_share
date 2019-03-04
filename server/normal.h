@@ -1,0 +1,1 @@
+void normal(int soc, char buf[1024], int valend);
