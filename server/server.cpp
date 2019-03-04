@@ -6,11 +6,14 @@
 #include <string.h>
 #include <errno.h>  
 #include <arpa/inet.h>    //close 
-
+#include <string>
 #include <sys/stat.h> //for getting file stats
 #include <sys/sendfile.h> //for sendfile() function
 #include <sys/fcntl.h> //for 0_RDONLY
-
+#include <unordered_map> 
+#include <iostream>
+using namespace std;
+#include "html.h"
 #define PORT 8550
 
 char *server_message =
@@ -29,11 +32,10 @@ char *server_message =
 </body>\n\
 </html>";
 
-
 int main(int argc, char const *argv[]) {
 
     struct stat obj; //to use stat.h
-    char buf[100], command[5], filename[20];
+    char buf[1024], command[5], filename[20];
     int k, i, size, len, c;
     int filehandle;
 
@@ -44,6 +46,7 @@ int main(int argc, char const *argv[]) {
     int max_sd;
     int addrlen = sizeof(address);
     char buffer[1024] = {0};
+    unordered_map<string, string> http_request; 
 
     //set of socket descriptors  
     fd_set readfds;   
@@ -132,7 +135,7 @@ int main(int argc, char const *argv[]) {
             printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs 
                   (address.sin_port));   
            
-            //send new connection greeting message  
+            // send new connection greeting message  
             // if( send(new_socket, server_message, strlen(server_message), 0) != strlen(server_message) )   
             // {   
             //     perror("send");   
@@ -161,7 +164,8 @@ int main(int argc, char const *argv[]) {
 
             if (FD_ISSET( sd , &readfds))   
             {   
-                valread = recv(sd, buf, 100, 0);
+                valread = recv(sd, buf, 1024, 0);
+                printf("169  %d\n",valread);
 
                 if (valread <= 0){
                     printf("error 178 %d\n",errno);   
@@ -176,6 +180,30 @@ int main(int argc, char const *argv[]) {
                     client_socket[i] = 0;  
                 }else
                 {
+                    // printf("value   %d\n",valread);
+                    buf[valread] = '\0';   
+                    printf("buffer %s\n",buf);
+
+                    http_request.clear();
+                    string work(buf);
+                    string str1 = "text/html"; 
+                    size_t found = work.find(str1); 
+                    if (found != string::npos) 
+                    { // html output
+                        printf("html\n");
+
+                        html(sd);
+                    }
+                    else
+                    {
+                        // non html
+                        printf("non - html\n");
+
+                    }
+                    
+                
+                    printf("196\n");
+                    
                     sscanf(buf, "%s", command);
 
                     if(!strcmp(command,"get"))
