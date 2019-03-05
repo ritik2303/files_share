@@ -29,7 +29,7 @@ int logic(int *soc, char buf[100], int valend){
             sendfile(*soc, filehandle, NULL, size);
         return 0;
     }
-    else if(!strcmp(command, "put"))
+    else if(!strcmp(command, "post"))
     {
         int c = 0, len;
         char *f;

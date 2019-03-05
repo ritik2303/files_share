@@ -45,7 +45,7 @@ int main(int argc,char *argv[])
   int i = 1;
   while(1)
     {
-      printf("Enter a choice:\n1- get\n2- put\n6- quit\n");
+      printf("Enter a choice:\n1- get\n2- post\n6- quit\n");
       scanf("%d", &choice);
       switch(choice)
       {
@@ -79,7 +79,7 @@ int main(int argc,char *argv[])
         system(buf);
         break;
       case 2:
-        printf("Enter filename to put to server: ");
+        printf("Enter filename to post on server: ");
               scanf("%s", filename);
         filehandle = open(filename, O_RDONLY);
               if(filehandle == -1)
@@ -87,7 +87,7 @@ int main(int argc,char *argv[])
                   printf("No such file on the local directory\n\n");
                   break;
                 }
-              strcpy(buf, "put ");
+              strcpy(buf, "post ");
         strcat(buf, filename);
         send(sock, buf, 100, 0);
         stat(filename, &obj);
