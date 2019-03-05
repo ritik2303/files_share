@@ -6,6 +6,7 @@
 #include <sys/fcntl.h> //for 0_RDONLY
 #include <sys/sendfile.h> //for sendfile() function
 #include <unistd.h>
+#include <dirent.h>
 
 using namespace std;
 char command[5], filename[20];
@@ -53,6 +54,22 @@ int logic(int *soc, char buf[100], int valend){
         send(*soc, &c, sizeof(int), 0);
         return 0;
     }
+
+    else if (!strcmp(command,"ls")) {
+        char str[1024] = ":: ";
+        DIR *dir;
+        struct dirent *ent;
+        if ((dir = opendir ("./")) != NULL) {
+            while ((ent = readdir (dir)) != NULL) {
+            strcat(str, " | ");
+            strcat(str,ent->d_name);
+            }
+        closedir(dir);
+        }
+        size = strlen(str);
+        send(*soc, &str, size, 0);
+    }
+    
 
     else if(!strcmp(command, "bye") || !strcmp(command, "quit"))
     {

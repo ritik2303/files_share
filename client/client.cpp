@@ -27,6 +27,8 @@ int main(int argc,char *argv[])
   char buf[100], command[5], filename[20], *f;
   int k, size, status;
   int filehandle;
+  char ls_buffer[1024] = {0};
+  int valread;
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if(sock == -1)
     {
@@ -45,7 +47,7 @@ int main(int argc,char *argv[])
   int i = 1;
   while(1)
     {
-      printf("Enter a choice:\n1- get\n2- post\n6- quit\n");
+      printf("Enter a choice:\n1- get\n2- post\n3-ls\n6- quit\n");
       scanf("%d", &choice);
       switch(choice)
       {
@@ -100,24 +102,12 @@ int main(int argc,char *argv[])
         else
           printf("File failed to be stored to remote machine\n");
         break;
-      // case 3:
-      //   strcpy(buf, "pwd");
-      //   send(sock, buf, 100, 0);
-      //   recv(sock, buf, 100, 0);
-      //   printf("The path of the remote directory is: %s\n", buf);
-      //   break;
-      // case 4:
-      //   strcpy(buf, "ls");
-      //         send(sock, buf, 100, 0);
-      //   recv(sock, &size, sizeof(int), 0);
-      //         f = (char*)malloc(size);
-      //         recv(sock, f, size, 0);
-      //   filehandle = creat("temp.txt", O_WRONLY);
-      //   write(filehandle, f, size);
-      //   close(filehandle);
-      //         printf("The remote directory listing is as follows:\n");
-      //   system("cat temp.txt");
-      //   break;
+      case 3:
+        strcpy(buf, "ls");
+        send(sock, buf, 100, 0);
+        valread = read(sock, ls_buffer, 1024);
+        printf("%s\n", ls_buffer);
+        break;
       // case 5:
       //   strcpy(buf, "cd ");
       //   printf("Enter the path to change the remote directory: ");
