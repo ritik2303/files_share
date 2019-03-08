@@ -14,7 +14,7 @@ using namespace std;
 #include "html.h"
 #include "normal.h"
 #include "logic.h"
-#define PORT 8550
+#define PORT 8000
 
 char *server_message =
 "HTTP/1.1 200 OK \n\
@@ -164,8 +164,9 @@ int main(int argc, char const *argv[]) {
 
             if (FD_ISSET( sd , &readfds))   
             {   
-                valread = recv(sd, buf, 100, 0);
+                valread = recv(sd, buf, 1024, 0);
                 printf("169  %d\n",valread);
+                printf("buffer  %s\n",buf);
 
                 if (valread <= 0){
                     printf("error 178 %d\n",errno);   
@@ -183,6 +184,8 @@ int main(int argc, char const *argv[]) {
                     { // html output
 
                         html(sd, buf, valread);
+                        closeConn(sd, address, &client_socket[i]);                    
+
                     }
                     else
                     {

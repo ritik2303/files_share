@@ -5,34 +5,138 @@
 
 using namespace std;
 
+char *shakehand = 
+"";
+
 char *server_message1 =
 "HTTP/1.1 200 OK \n\
 \n\
 <html>\n\
-<head>\n\
-  <title>My first styled page</title>\n\
-</head>\n\
-\n\
-<body>\n\
-\n\
-<!-- Main content -->\n\
-<h1>My first styled page</h1>\n\
-\n\
-<p>Welcome to my styled page!\n\
-\n\
-<p>It lacks images, but at least it has style.\n\
-And it has links, even if they don't go\n\
-anywhere&hellip;\n\
-\n\
-<p>There should be more here, but I don't know\n\
-what yet.\n\
-\n\
-<!-- Sign and date the page, it's only polite! -->\n\
-<address>Made 5 April 2004<br>\n\
-  by myself.</address>\n\
-\n\
-</body>\n\
+    <head>\n\
+        <title>\n\
+            File share\n\
+        </title>\n\
+        <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js\"></script>\n\
+        <!-- <script src=\"http://cdn.socket.io/stable/socket.io.js\"></script> -->\n\
+        <script>\n\
+            $(document).ready(function(){\n\
+                if (\"WebSocket\" in window) {\n\
+                    alert(\"WebSocket is supported by your Browser!\");\n\
+                }else{\n\
+                    alert(\"WebSocket is not supported by your Browser!\");\n\
+                }\n\
+                var ws = new WebSocket(\"ws://localhost:8000/\");\n\
+                \n\
+                var reader = new FileReader();\n\
+                reader.onload = function(e){\n\
+                    var arrbuf = reader.result;\n\
+                }\n\
+               $(\"#put\").click(function(){\n\
+                   $('#pfile').css(\"display\",\"block\");\n\
+                   $('#upload').css(\"display\",\"block\");\n\
+                   $('#gfile').css(\"display\",\"none\");\n\
+                   $('#download').css(\"display\",\"none\");\n\
+               });\n\
+               $(\"#get\").click(function(){\n\
+                   $('#pfile').css(\"display\",\"none\");\n\
+                   $('#upload').css(\"display\",\"none\");\n\
+                   $('#gfile').css(\"display\",\"block\");\n\
+                   $('#download').css(\"display\",\"block\");\n\
+               });\n\
+                   $('#upload').click(function(){\n\
+                       var buf = \"put \";\n\
+                       var file = document.getElementById('#pfile');\n\
+                    //    try {\n\
+                    //     var ws = new Websocket(document.URL);\n\
+                    //    } catch (error) {\n\
+                    //        console.log(error);\n\
+                    //    }\n\
+                       console.log(\"Socket connected successfully\");\n\
+                       ws.onopen = function(event){\n\
+                            console.log(\"Socket onopen successfully\");\n\
+                           try{\n\
+                               ws.send(file.name);\n\
+                               ws.send(file.size);\n\
+                           } catch(exception){\n\
+                            $(\"disp\").text(\"Exception: \"+ exception);\n\
+                            ws.close(); return false;\n\
+                           }\n\
+                           reader.readAsArrayBuffer(file);\n\
+                           try{\n\
+                               ws.send(arrbuf);\n\
+                           } catch(exception){\n\
+                            $(\"disp\").text(\"Exception: \"+ exception);\n\
+                            ws.close(); return false;\n\
+                           }\n\
+                           try {\n\
+                               ws.onmessage = function(event){\n\
+                                   buf = event.data;\n\
+                               }\n\
+                           } catch (exception) {\n\
+                            $(\"disp\").text(\"Exception: \"+ exception);\n\
+                            ws.close(); return false;\n\
+                           }\n\
+                           if(buf){\n\
+                            $(\"disp\").text(\"Saved\");   \n\
+                           }\n\
+                           else{\n\
+                            $(\"disp\").text(\"Failed to save\");\n\
+                           }\n\
+                       }\n\
+                    //    ws.close();\n\
+                   });\n\
+                   $('#download').click(function(){\n\
+                       var buf = \"get \";\n\
+                       var fname = $('#gfile').val();\n\
+                       buf += fname;\n\
+                       var ws = new Websocket(document.URL);\n\
+                       ws.onopen = function(event){\n\
+                           try {\n\
+                            ws.send(buf);\n\
+                           } catch (exception) {\n\
+                            $(\"#disp\").text(\"Exception: \" + exception+\"\\nException sending data\");\n\
+                            ws.close(); return false;\n\
+                           }\n\
+                           try {\n\
+                               ws.onmessage = function(event){\n\
+                                   buf = event.data;\n\
+                               }\n\
+                           } catch (exception) {\n\
+                            $(\"#disp\").text(\"Exception: \" + exception+\"\\nException recieving data\");\n\
+                            ws.close(); return false;\n\
+                           }\n\
+                       }\n\
+                       feed = new File(buf, fname);\n\
+                       $(\"#download\").click(function(){\n\
+                        uriContent = \"data:application/octet-stream,\" + encodeURIComponent(content);\n\
+                        newWindow = window.open(uriContent, 'feed');\n\
+                       });\n\
+                   });\n\
+            });\n\
+        </script>\n\
+        <style>\n\
+            #pfile, #upload, #gfile, #download{\n\
+                display: none;\n\
+            }\n\
+        </style>\n\
+    </head>\n\
+    <body>\n\
+    <table>\n\
+        <tr>\n\
+            <td><button id=\"put\">PUT</button></td>\n\
+            <td><input type=\"file\" id=\"pfile\"></td>\n\
+            <td><button id=\"upload\">Upload</button></td>\n\
+        </tr>\n\
+        <tr>\n\
+            <td><button id=\"get\">GET</button></td>\n\
+            <td><input type=\"text\" id=\"gfile\"></td>\n\
+            <td><button id=\"download\">Download</button></td>\n\
+        </tr>\n\
+    </table>\n\
+    <div></div>\n\
+    </body>\n\
 </html>";
+
 // void encode(std::string& data);
 // void escape1(std::string *data);
 
@@ -41,28 +145,9 @@ void html(int soc, char buf[1024], int valend){
     send(soc, server_message1, strlen(server_message1), 0);
 }
 
-// void encode(std::string& data) {
-//     std::string buffer;
-//     buffer.reserve(data.size());
-//     for(size_t pos = 0; pos != data.size(); ++pos) {
-//         switch(data[pos]) {
-//             case '&':  buffer.append("&amp;");       break;
-//             case '\"': buffer.append("&quot;");      break;
-//             case '\'': buffer.append("&apos;");      break;
-//             case '<':  buffer.append("&lt;");        break;
-//             case '>':  buffer.append("&gt;");        break;
-//             default:   buffer.append(&data[pos], 1); break;
-//         }
-//     }
-//     data.swap(buffer);
-// }
+string encode(string input){
+    // string response = SHA1(append(base64_decode(key64), "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+    // string response_encoded = base64_encode(response);
+    // return response_encoded;
 
-// void escape1(std::string *data)
-// {
-//     using boost::algorithm::replace_all;
-//     replace_all(*data, "&",  "&amp;");
-//     replace_all(*data, "\"", "&quot;");
-//     replace_all(*data, "\'", "&apos;");
-//     replace_all(*data, "<",  "&lt;");
-//     replace_all(*data, ">",  "&gt;");
-// }
+}

@@ -1,0 +1,125 @@
+<html>
+    <head>
+        <title>
+            File share
+        </title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <!-- <script src="http://cdn.socket.io/stable/socket.io.js"></script> -->
+        <script>
+            $(document).ready(function(){
+                if ("WebSocket" in window) {
+                    alert("WebSocket is supported by your Browser!");
+                }else{
+                    alert("WebSocket is not supported by your Browser!");
+                }
+                var ws = new WebSocket("ws://localhost:8000/");
+                
+                var reader = new FileReader();
+                reader.onload = function(e){
+                    var arrbuf = reader.result;
+                }
+               $("#put").click(function(){
+                   $('#pfile').css("display","block");
+                   $('#upload').css("display","block");
+                   $('#gfile').css("display","none");
+                   $('#download').css("display","none");
+               });
+               $("#get").click(function(){
+                   $('#pfile').css("display","none");
+                   $('#upload').css("display","none");
+                   $('#gfile').css("display","block");
+                   $('#download').css("display","block");
+               });
+                   $('#upload').click(function(){
+                       var buf = "put ";
+                       var file = document.getElementById('#pfile');
+                    //    try {
+                    //     var ws = new Websocket(document.URL);
+                    //    } catch (error) {
+                    //        console.log(error);
+                    //    }
+                       console.log("Socket connected successfully");
+                       ws.onopen = function(event){
+                            console.log("Socket onopen successfully");
+                           try{
+                               ws.send(file.name);
+                               ws.send(file.size);
+                           } catch(exception){
+                            $("disp").text("Exception: "+ exception);
+                            ws.close(); return false;
+                           }
+                           reader.readAsArrayBuffer(file);
+                           try{
+                               ws.send(arrbuf);
+                           } catch(exception){
+                            $("disp").text("Exception: "+ exception);
+                            ws.close(); return false;
+                           }
+                           try {
+                               ws.onmessage = function(event){
+                                   buf = event.data;
+                               }
+                           } catch (exception) {
+                            $("disp").text("Exception: "+ exception);
+                            ws.close(); return false;
+                           }
+                           if(buf){
+                            $("disp").text("Saved");   
+                           }
+                           else{
+                            $("disp").text("Failed to save");
+                           }
+                       }
+                    //    ws.close();
+                   });
+                   $('#download').click(function(){
+                       var buf = "get ";
+                       var fname = $('#gfile').val();
+                       buf += fname;
+                       var ws = new Websocket(document.URL);
+                       ws.onopen = function(event){
+                           try {
+                            ws.send(buf);
+                           } catch (exception) {
+                            $("#disp").text("Exception: " + exception+"\nException sending data");
+                            ws.close(); return false;
+                           }
+                           try {
+                               ws.onmessage = function(event){
+                                   buf = event.data;
+                               }
+                           } catch (exception) {
+                            $("#disp").text("Exception: " + exception+"\nException recieving data");
+                            ws.close(); return false;
+                           }
+                       }
+                       feed = new File(buf, fname);
+                       $("#download").click(function(){
+                        uriContent = "data:application/octet-stream," + encodeURIComponent(content);
+                        newWindow = window.open(uriContent, 'feed');
+                       });
+                   });
+            });
+        </script>
+        <style>
+            #pfile, #upload, #gfile, #download{
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+    <table>
+        <tr>
+            <td><button id="put">PUT</button></td>
+            <td><input type="file" id="pfile"></td>
+            <td><button id="upload">Upload</button></td>
+        </tr>
+        <tr>
+            <td><button id="get">GET</button></td>
+            <td><input type="text" id="gfile"></td>
+            <td><button id="download">Download</button></td>
+        </tr>
+    </table>
+    <div></div>
+    </body>
+</html>
