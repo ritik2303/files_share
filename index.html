@@ -1,0 +1,94 @@
+<!--credits: https://codepen.io/rauldronca/pen/oYbXyZ-->
+<html>
+    <head>
+        <title>
+            File share
+        </title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <!-- <script src="http://cdn.socket.io/stable/socket.io.js"></script> -->
+        <script>
+            $(document).ready(function(){
+                var ws = new WebSocket(document.URL);
+                var reader = new FileReader();
+                reader.onload = function(e){
+                    var arrbuf = reader.result;
+                }
+               $("#put").click(function(){
+                   $('#pfile').css("display","block");
+                   $('#upload').css("display","block");
+                   $('#gfile').css("display","none");
+                   $('#download').css("display","none");
+               });
+               $("#get").click(function(){
+                   $('#pfile').css("display","none");
+                   $('#upload').css("display","none");
+                   $('#gfile').css("display","block");
+                   $('#download').css("display","block");
+               });
+            //    ws.onopen = function(eve){
+            //        $('#upload').click(function(){
+            //            var buf = "put ";
+            //            var file = document.getElementById('#pfile');
+            //            ws.send(file.name);
+            //            ws.send(file.size);
+            //            reader.readAsArrayBuffer(file);
+            //            ws.send(arrbuf);
+            //            ws.onmessage = function(event){
+            //                buf = event.data;
+            //            }
+            //            if(buf){
+            //                $("disp").text("Saved");
+            //            }
+            //            else{
+            //                $("disp").text("Failed to save");
+            //            }
+            //        });
+            //        $('#download').click(function(){
+            //            var buf = "get ";
+            //            var fname = $('#gfile').val();
+            //            buf += fname;
+            //            try{
+            //                ws.send(buf);
+            //            } catch(exception){
+            //                $("#disp").text("Exception: " + exception+"\nException sending data");
+            //                break;
+            //            }
+            //            try{
+            //                ws.onmessage = function(event){
+            //                    buf = event.data;
+            //                }
+            //            }  catch(exception){
+            //                $("#disp").text("Exception: " + exception+"\nException recieving data");
+            //                break;
+            //            }
+            //            feed = new File(buf, fname);
+            //            $("#download").click(function(){
+            //             uriContent = "data:application/octet-stream," + encodeURIComponent(content);
+            //             newWindow = window.open(uriContent, 'feed');
+            //            });
+            //        });
+            //    };
+            });
+        </script>
+        <style>
+            #pfile, #upload, #gfile, #download{
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+    <table>
+        <tr>
+            <td><button id="put">PUT</button></td>
+            <td><input type="file" id="pfile"></td>
+            <td><button id="upload">Upload</button></td>
+        </tr>
+        <tr>
+            <td><button id="get">GET</button></td>
+            <td><input type="text" id="gfile"></td>
+            <td><button id="download">Download</button></td>
+        </tr>
+    </table>
+    <div></div>
+    </body>
+</html>
