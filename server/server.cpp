@@ -14,6 +14,7 @@ using namespace std;
 #include "html.h"
 #include "normal.h"
 #include "logic.h"
+#include "html_req.h"
 #define PORT 8000
 
 char *server_message =
@@ -112,7 +113,7 @@ int main(int argc, char const *argv[]) {
         //so wait indefinitely  
         activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);   
        
-        printf("activity: %d\n",activity); 
+        printf("\nactivity: %d\n",activity); 
         if ((activity < 0) && (errno!=EINTR))   
         {   
             printf("select error");   
@@ -165,11 +166,11 @@ int main(int argc, char const *argv[]) {
             if (FD_ISSET( sd , &readfds))   
             {   
                 valread = recv(sd, buf, 1024, 0);
-                printf("169  %d\n",valread);
-                printf("buffer  %s\n",buf);
+                printf("valread:  %d\n",valread);
+                printf("buffer  \n%s",buf);
 
                 if (valread <= 0){
-                    printf("error 178 %d\n",errno);   
+                    printf("error %d\n",errno);   
                     //Somebody disconnected , get his details and print  
                     closeConn(sd, address, &client_socket[i]);
 
@@ -189,10 +190,19 @@ int main(int argc, char const *argv[]) {
                     }
                     else
                     {
-                        // non html
+                        str1 = "GET / HTTP"; 
+                        size_t found = work.find(str1); 
+                        
+                        if (found != string::npos){
+                            // html request
+                            html_req(sd, buf, valread);
+                        }else {
+                            // non html
                         normal(sd, buf, valread);
+                        }
+                       
                     }
-                    
+                    printf("value     %d\n",logic(&sd, buf, valread));
                     if(logic(&sd, buf, valread) == -1 ){
                         closeConn(sd, address, &client_socket[i]);                    
                     }

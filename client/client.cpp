@@ -15,7 +15,7 @@
 
 /*for O_RDONLY*/
 #include<fcntl.h>
-#define PORT 8550
+#define PORT 8000
 
 
 int main(int argc,char *argv[])
